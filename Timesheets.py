@@ -24,7 +24,7 @@ def select_and_rename_columns(dataframe, columns_to_keep, new_column_names):
     return dataframe
 
 # Load the CSV file
-df = pd.read_csv('./data/MOCK_TIMESHEET_DATA.csv')
+df = pd.read_csv('./data/timesheet_data.csv')
 
 # Filter rows where 'Quantity Reg' is greater than 8
 df_filtered = adjust_quantity(df, 8)

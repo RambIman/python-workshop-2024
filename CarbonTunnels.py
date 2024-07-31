@@ -1,76 +1,40 @@
 import pandas as pd
 import numpy as np
 
-def calculate_carbon_footprint(tunnel_data, materials, equipment, excavation_data, energy_consumption):
-    # Load data into Pandas DataFrames
-    tunnel_df = pd.read_csv("tunnel_data.csv")
-    materials_df = pd.read_csv("materials.csv")
-    equipment_df = pd.read_csv("equipment.csv")
-    excavation_df = pd.read_csv("excavation_data.csv")
-    energy_df = pd.read_csv("energy_consumption.csv")
+def calculate_shaft_co2(data, concrete_emission_factor, excavation_emission_factor, transport_emissions_factor):
+  """Calculates CO2 emissions for each tunnel shaft.
 
-    # Emission factors (replace with actual values)
-    emission_factor_diesel = 2.64  # kg CO2/liter
-    emission_factor_electricity = 0.24  # kg CO2/kWh
-    transport_emission_factor = 0.1  # kg CO2/ton-km (example value)
+  Args:
+    data: Pandas DataFrame containing shaft data.
+    concrete_emission_factor: CO2 emissions per cubic metre of concrete.
+    excavation_emission_factor: CO2 emissions per cubic metre of excavated material.
+    transport_emissions_factor: CO2 emissions per ton-km travelled
 
-    # Calculations (simplified)
+  Returns:
+    Pandas Series with CO2 emissions for each shaft.
+  """
 
-    # Material emissions
-    material_emissions = (
-        excavation_df.merge(materials_df, left_on="material_excavated", right_on="material_name")
-        .groupby("tunnel_id")
-        .apply(
-            lambda x: (
-                x["volume_m3"] * x["embodied_carbon_kg_per_ton"] / 1000
-            ).sum()
-        )
-    )
+  # Calculate concrete volume
+  data['concrete_volume'] = np.pi * ((data['diameter'] / 2) ** 2) * (data['thickness'] + data['base_slab_thickness'])
 
-    # Equipment emissions
-    equipment_emissions = (
-        equipment_df
-        .assign(
-            fuel_consumption_total=lambda x: x["fuel_consumption_liters_per_hour"] * x["hours_used"]
-        )
-        .assign(
-            energy_consumption_total=lambda x: x["energy_consumption_kWh_per_hour"] * x["hours_used"]
-        )
-        .assign(
-            CO2_emissions=lambda x: x["fuel_consumption_total"] * emission_factor_diesel
-            + x["energy_consumption_total"] * emission_factor_electricity
-        )
-        .groupby("equipment_id")["CO2_emissions"].sum()
-    )
+  # Estimate excavated material (assuming cylindrical shape for simplicity)
+  data['excavated_volume'] = np.pi * ((data['diameter'] / 2) ** 2) * data['thickness']
+  # Assuming density of excavated material as 2.5 tons/m^3
+  data['excavated_mass'] = data['excavated_volume'] * 2.5
 
-    # Excavation and transport emissions
-    excavation_emissions = (
-        excavation_df
-        .assign(
-            transport_emissions=lambda x: x["volume_m3"] * x["transport_distance_km"] * transport_emission_factor / 1000
-        )
-        .groupby("tunnel_id")["transport_emissions"].sum()
-    )
+  # Calculate CO2 emissions
+  data['concrete_co2'] = data['concrete_volume'] * concrete_emission_factor
+  data['excavation_co2'] = data['excavated_volume'] * excavation_emission_factor
+  data['transport_co2'] = data['excavated_mass'] * data['excavation_distance'] * transport_emissions_factor
+  data['total_co2'] = data['concrete_co2'] + data['excavation_co2'] + data['transport_co2']
 
-    # Energy consumption emissions
-    energy_emissions = (
-        energy_df
-        .assign(
-            CO2_emissions=lambda x: x["energy_consumption_kWh"] * emission_factor_electricity
-        )
-        .groupby("tunnel_id")["CO2_emissions"].sum()
-    )
-
-    # Total carbon footprint
-    total_carbon_footprint = (
-        material_emissions
-        + equipment_emissions
-        + excavation_emissions
-        + energy_emissions
-    )
-
-    return total_carbon_footprint
+  return data['total_co2']
 
 # Example usage
-total_carbon_footprint = calculate_carbon_footprint(tunnel_data, materials, equipment, excavation_data, energy_consumption)
-print(total_carbon_footprint)
+data = pd.read_csv('./data/tunnel_data.csv')
+concrete_emission_factor = 0.2  # Example value, adjust based on region and concrete mix
+excavation_emission_factor = 0.05  # Example value, adjust based on transport mode and distance
+transport_emissions_factor = 3 
+
+co2_emissions = calculate_shaft_co2(data, concrete_emission_factor, excavation_emission_factor, transport_emissions_factor)
+print(co2_emissions)
