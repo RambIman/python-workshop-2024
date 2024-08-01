@@ -32,12 +32,12 @@ df_filtered = adjust_quantity(df, 8)
 # Define the columns to keep and their new names
 columns_to_keep = ['Original Entry Date', 'Task', 'Description', 'Employee Number', 'Employee Name', 'Quantity Reg']
 new_column_names = {
-    'Original Entry Date': 'Entry Date',
+    'Original Entry Date': 'Date',
     'Task': 'Task',
     'Description': 'Description',
     'Employee Number': 'Emp Number',
     'Employee Name': 'Emp Name',
-    'Quantity Reg': 'Qty Reg'
+    'Quantity Reg': 'Hours'
 }
 
 # Select and rename columns
